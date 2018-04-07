@@ -1,6 +1,6 @@
 # -*- coding=utf-8 -*-
 
-import Util
+import zhihu_spider.zhihu_login.Util as Util
 import urllib
 
 
