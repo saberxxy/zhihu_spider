@@ -51,8 +51,11 @@ def get_topic_info(level, number):
     # print('话题编号：', topic_id)
 
     # 话题名称
-    a_2 = soup_hot.findAll('title', attrs={'data-react-helmet':'true'})[0].contents[0]
-    topic_name = str(a_2).replace(' - 知乎', '').replace('话题名称： ', '')
+    try:
+        a_2 = soup_hot.findAll('title', attrs={'data-react-helmet':'true'})[0].contents[0]
+        topic_name = str(a_2).replace(' - 知乎', '').replace('话题名称： ', '')
+    except Exception:
+        topic_name = 0
     # print('话题名称：', topic_name)
 
     # 话题链接
@@ -64,13 +67,19 @@ def get_topic_info(level, number):
     # print('话题链接：', topic_link)
 
     # 关注人数
-    a_4 = soup_hot.findAll('strong', attrs={'class':'NumberBoard-itemValue'})
-    follow_number = int(str(a_4[0].contents[0]).replace(',', ''))
+    try:
+        a_4 = soup_hot.findAll('strong', attrs={'class':'NumberBoard-itemValue'})
+        follow_number = int(str(a_4[0].contents[0]).replace(',', ''))
+    except Exception:
+        follow_number = 0
     # print('关注人数：', follow_number)
 
     # 问题数
-    a_5 = soup_hot.findAll('strong', attrs={'class':'NumberBoard-itemValue'})
-    question_number = int(str(a_5[1].contents[0]).replace(',', ''))
+    try:
+        a_5 = soup_hot.findAll('strong', attrs={'class':'NumberBoard-itemValue'})
+        question_number = int(str(a_5[1].contents[0]).replace(',', ''))
+    except Exception:
+        question_number = 0
     # print('问题数：', question_number)
 
     # 话题描述
@@ -137,6 +146,7 @@ def input_mysql(topic_info):
                    (topic_info['topic_id']) )
     # print(topic_id_exists)
     if topic_id_exists >= 1:
+        print('话题已经存在，不再入库')
         return '话题已经存在，不再入库'
 
     cursor.execute("insert into zhihu_topic(topic_uuid, topic_id, topic_name, topic_link,"
@@ -149,17 +159,19 @@ def input_mysql(topic_info):
              topic_info['parent_topic_id'], topic_info['children_topic_id'],
              topic_info['store_time'], topic_info['topic_level']))
     cursor.execute("commit")
+    print('提交完毕，入库成功')
     return '提交完毕，入库成功'
 
 
 if __name__ == '__main__':
-    # 19555383 19776749 19618774
-    # number = 19776749
-    # 输入一个level，获取该level的下一级level的话题的子话题id
-    # level = 0
-    for level in range(3, 100):
+    # 获取数据库里最大的level，获取该level的下一级level的话题的子话题id
+    # 由于已经入库的就不再入库，因此可以从任何位置开始
+    cursor.execute("select distinct topic_level from zhihu_topic order by topic_level desc limit 1")
+    x = cursor.fetchall()[0]
+    print(x['topic_level']-1)
+
+    for level in range(x['topic_level']-1, 100):
         print('抓取第', str(level+1), '层级的话题')
-        cursor = mysql_conn.getConfig()
         cursor.execute("select children_topic_id, topic_level from zhihu_topic where topic_level=%s \
                        and children_topic_id <> ''",
                        (str(level)))
